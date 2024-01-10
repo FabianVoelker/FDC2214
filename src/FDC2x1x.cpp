@@ -27,12 +27,43 @@
 
 /**************************************************************************/
 /*!
-    @brief Write value to register.
-    @param i2caddr register address
-    @param wirePort value to write
+    @brief Initalisize FDC2x1x Device
+    @param i2caddr I2C Adress [0x2A DEFAULT]
+    @param wirePort I2C Port of Device
 */
 /**************************************************************************/
-bool FDC2214::begin(uint8_t i2caddr, TwoWire &wirePort)
+bool FDC2214::begin(uint8_t i2caddr, TwoWire &wirePort, uint32_t i2cSpeed)
 {
-  
+  _i2cAddr = i2caddr;
+  _i2cPort = &wirePort;
+
+  _i2cPort->begin();
+  _i2cPort->setClock(i2cSpeed);
+
+  _i2cPort->beginTransmission(_i2cAddr);
+
+  uint8_t error = _i2cPort->endTransmission();
+
+  if(error == 0)
+  {
+	  return true;           //Device online!
+  }
+  else 
+  {
+    return false;          //Device not attached?
+  }
+}
+
+
+uint16_t FDC2214::readRegister(uint8_t Register)
+{
+  uint16_t data;
+
+  Wire.beginTransmission(_i2cAddr);
+  Wire.write(Register);
+  Wire.endTransmission(false);
+  Wire.requestFrom(_i2cAddr, static_cast<uint8_t>(2));
+  data = Wire.read() & 0xFF;
+  data <<= 8;
+  data |= Wire.read() & 0xFF;
 }

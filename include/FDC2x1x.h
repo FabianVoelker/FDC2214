@@ -24,6 +24,9 @@
 #include <Wire.h>
 
 
+#define I2C_SPEED_STANDARD        100000
+#define I2C_SPEED_FAST            400000
+
 
 /*============================ Register-Map ================================================*/
 
@@ -87,12 +90,14 @@ class FDC2214
 public:
 
     FDC2214();
-    bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0, TwoWire &wirePort = Wire);
+    bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0, TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD);
     bool isConnected();
 
 private:
     TwoWire *_i2cPort;  
     uint8_t	_i2cAddr = FDC2x1x_ADDRESS_0;
+
+    uint16_t _deviceid;
 
     uint16_t readRegister(uint8_t Register);
     uint16_t writeRegister(uint8_t Register, uint16_t DataW);
