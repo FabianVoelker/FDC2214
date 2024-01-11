@@ -19,8 +19,6 @@
 #else
 #include "WProgram.h"
 #endif
-#include <Adafruit_I2CDevice.h>
-#include <SPI.h>
 #include <Wire.h>
 
 
@@ -33,8 +31,8 @@
 #define FDC2x1x_ADDRESS_0                   0x2A    //< I2C Address for FDC2x1x [ADDR PIN = LOW] (DEFAULT)
 #define FDC2x1x_ADDRESS_1                   0x2B    //< I2C Address for FDC2x1x [ADDR PIN = HIGH]
 
-#define FDC211x_ID                          0x3054
-#define FDC221x_ID                          0x3055
+#define FDC211x_ID                          0x3054  //< Device ID FDC211x
+#define FDC221x_ID                          0x3055  //< Device ID FDC221x
 
 /* Registers */
 #define FDC2x1x_DEVICE_ID                   0x7F    //< FDC2x1x-Register Device ID
@@ -43,13 +41,40 @@
 #define FDC2x1x_MUX_CONFIG          		0x1B    //< FDC2x1x-Register Multiplexing Configuration
 #define FDC2x1x_CONFIG              		0x1A    //< FDC2x1x-Register Conversion Configuration
 #define FDC2x1x_STATUS              		0x18    //< FDC2x1x-Register Device Status Reporting
-#define FDC2x1x_STATUS_CONFIG              	0x19    //< FDC2x1x-Register Device Status Reporting Configuration
+#define FDC2x1x_ERROR_CONFIG              	0x19    //< FDC2x1x-Register Device Status Reporting Configuration
 #define FDC2x1x_RESET_DEVICE                0x1C    //< FDC2x1x-Register Reset Device
+
+
+enum IntteruptFunctions 
+{
+    FDC2x1x_INTB_OFF,
+    FDC2x1x_INTB_WD,
+    FDC2x1x_INTB_DATAREADY,
+};
+
+enum DeglitchFilter 
+{
+    FDC2x1x_FILTER_1MHZ,
+    FDC2x1x_FILTER_3MHZ,
+    FDC2x1x_FILTER_10MHZ,
+    FDC2x1x_FILTER_33MHZ,
+};
+
+enum AutoscanSequence 
+{
+    FDC2x1x_SEQ_CH0_CH1,
+    FDC2x1x_SEQ_CH0_CH1_CH2,
+    FDC2x1x_SEQ_CH0_CH1_CH2_CH3,
+};
+
 
 #define FDC2x1x_CLOCK_DIVIDERS_CH0  		0x14    //< FDC2x1x-Register Reference Divider Settings Channel 0
 #define FDC2x1x_CLOCK_DIVIDERS_CH1  		0x15    //< FDC2x1x-Register Reference Divider Settings Channel 1
 #define FDC2x1x_CLOCK_DIVIDERS_CH2  		0x16    //< FDC2x1x-Register Reference Divider Settings Channel 2
 #define FDC2x1x_CLOCK_DIVIDERS_CH3  		0x17    //< FDC2x1x-Register Reference Divider Settings Channel 3
+
+#define CHx_FIN_SEL_DIFFERENTIAL            0b01    
+#define CHx_FIN_SEL_SINGLEENDED             0b10
 
 #define FDC2x1x_DRIVE_CURRENT_CH0           0x1E    //< FDC2x1x-Register Sensor Current Drive Configuration Channel 0    
 #define FDC2x1x_DRIVE_CURRENT_CH1           0x1F    //< FDC2x1x-Register Sensor Current Drive Configuration Channel 1 
@@ -91,7 +116,40 @@ public:
 
     FDC2214();
     bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0, TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD);
-    bool isConnected();
+    bool isConnected(void);
+
+    uint16_t getManufacturerID(void);
+    uint16_t getDeviceID(void);
+
+    uint16_t getStatus(void);
+
+    void configureChannel(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider);
+
+    void setDividers(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider);
+    void setDriveCurrent(uint8_t channel, uint16_t CHxIDrive);
+    void setSettleCount(uint8_t channel, uint16_t CHxSettleCount);
+    void setReferenceCount(uint8_t channel, uint16_t CHxRefCount);
+    void setOffset(uint8_t channel, uint16_t CHxOffset);
+
+    void setDeglitchFilter(enum DeglitchFilter filter);
+    void enableAutoScan(bool en);
+    void setRRSequence(enum AutoscanSequence sequence);
+
+    void setActiveChannel(uint8_t channel);
+    void activateSensor(bool en);
+    void enableFullCurrentActivationMode(bool en);
+    void selectOscillator(bool oscillator);
+    void enableHighCurrentDrive(bool en);
+
+    void enableWDError(bool en);
+    void enableAmpHighError(bool en);
+    void enableAmpLowError(bool en);
+    void setINTB(enum IntteruptFunctions functions);
+
+    
+
+
+    uint32_t getReading(uint8_t channel);
 
 private:
     TwoWire *_i2cPort;  
@@ -100,7 +158,7 @@ private:
     uint16_t _deviceid;
 
     uint16_t readRegister(uint8_t Register);
-    uint16_t writeRegister(uint8_t Register, uint16_t DataW);
+    void writeRegister(uint8_t Register, uint16_t DataW);
 };
 
 
