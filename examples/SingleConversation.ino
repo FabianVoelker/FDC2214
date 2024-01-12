@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <FDC2214.h>
 
-FDC2214 FDC(Wire,100000);
+FDC2214 FDC;
 
 uint32_t Reading;
 
@@ -36,5 +36,5 @@ void loop(void)
   Reading = FDC.getReading(FDC2x1x_CH0);
   Serial.println(Reading);
 
-  delay(2000);
+  delay(100);
 }

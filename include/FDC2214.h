@@ -128,8 +128,8 @@ class FDC2214
 
 public:
 
-    FDC2214(TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD);
-    bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0);
+    FDC2214();
+    bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0, TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD);
     bool isConnected(void);
 
     uint16_t getManufacturerID(void);

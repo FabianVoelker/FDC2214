@@ -24,12 +24,9 @@
 
 
 
-FDC2214::FDC2214(TwoWire &wirePort, uint32_t i2cSpeed)
+FDC2214::FDC2214()
 {
-  _i2cPort = &wirePort;
-
-  _i2cPort->begin();
-  _i2cPort->setClock(i2cSpeed);
+  
 }
 
 
@@ -40,9 +37,12 @@ FDC2214::FDC2214(TwoWire &wirePort, uint32_t i2cSpeed)
     @param wirePort I2C Port of Device
 */
 /**************************************************************************/
-bool FDC2214::begin(uint8_t i2caddr)
+bool FDC2214::begin(uint8_t i2caddr, TwoWire &wirePort, uint32_t i2cSpeed)
 {
+  _i2cPort = &wirePort;
   _i2cAddr = i2caddr;
+
+  _i2cPort->begin();
 
   _i2cPort->beginTransmission(_i2cAddr);
 
