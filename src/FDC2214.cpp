@@ -9,7 +9,7 @@
 */
 
 
-#include "FDC2x1x.h"
+#include "FDC2214.h"
 
 #ifdef __AVR__
 #include <avr/pgmspace.h>
@@ -24,6 +24,15 @@
 
 
 
+FDC2214::FDC2214(TwoWire &wirePort, uint32_t i2cSpeed)
+{
+  _i2cPort = &wirePort;
+
+  _i2cPort->begin();
+  _i2cPort->setClock(i2cSpeed);
+}
+
+
 /**************************************************************************/
 /*!
     @brief Initalisize FDC2x1x Device
@@ -31,13 +40,9 @@
     @param wirePort I2C Port of Device
 */
 /**************************************************************************/
-bool FDC2214::begin(uint8_t i2caddr, TwoWire &wirePort, uint32_t i2cSpeed)
+bool FDC2214::begin(uint8_t i2caddr)
 {
   _i2cAddr = i2caddr;
-  _i2cPort = &wirePort;
-
-  _i2cPort->begin();
-  _i2cPort->setClock(i2cSpeed);
 
   _i2cPort->beginTransmission(_i2cAddr);
 
@@ -124,7 +129,66 @@ uint16_t FDC2214::getStatus(void)
 }
 
 
+/**************************************************************************/
+/*!
+    @brief gets the conversation result
+    @param channel Channel Selection ( CH0 - CH3 )
+*/
+/**************************************************************************/
+uint32_t FDC2214::getReading(enum Channel channel)
+{
+  uint32_t Reading;
 
+  uint8_t timeout = 200;
+
+  uint8_t addressMSB;
+	uint8_t addressLSB;
+	uint8_t bitUnreadConv;
+
+  uint16_t status = readRegister(FDC2x1x_STATUS);
+
+  switch (channel)
+  {
+		case (FDC2x1x_CH0):
+			addressMSB = FDC2x1x_DATA_CH0_MSB;
+			addressLSB = FDC2x1x_DATA_CH0_LSB;
+			bitUnreadConv = 0x08;
+		break;
+		case (FDC2x1x_CH1):
+			addressMSB = FDC2x1x_DATA_CH1_MSB;
+			addressLSB = FDC2x1x_DATA_CH1_LSB;
+			bitUnreadConv = 0x04;
+		break;
+		case (FDC2x1x_CH2):
+			addressMSB = FDC2x1x_DATA_CH2_MSB;
+			addressLSB = FDC2x1x_DATA_CH2_LSB;
+			bitUnreadConv = 0x02;
+		break;
+		case (FDC2x1x_CH3):
+			addressMSB = FDC2x1x_DATA_CH3_MSB;
+			addressLSB = FDC2x1x_DATA_CH3_LSB;
+			bitUnreadConv = 0x01;
+		break;
+		default: return 0;
+	}
+
+  while (timeout && !(status & bitUnreadConv)) 
+  {
+        status = readRegister(FDC2x1x_STATUS);
+        timeout--;
+  }
+
+  if(timeout)
+  {
+    Reading = (uint32_t)(readRegister(addressMSB) & 0x0FFF) << 16;
+    Reading |= readRegister(addressLSB);
+    return Reading;
+  }
+  else
+  {
+    return 0;
+  }
+}
 
 
 
@@ -137,7 +201,7 @@ uint16_t FDC2214::getStatus(void)
     @param CHxRefDivider Sets fREFx = fCLK/CHx_FREF_DIVIDER
 */
 /**************************************************************************/
-void FDC2214::setDividers(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider)
+void FDC2214::setDividers(enum Channel channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider)
 {
   uint16_t DataW;
 
@@ -152,16 +216,16 @@ void FDC2214::setDividers(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxR
 
   switch (channel)
   {
-    case (0):
+    case (FDC2x1x_CH0):
       writeRegister(FDC2x1x_CLOCK_DIVIDERS_CH0,DataW);
 		break;
-		case (1):
+		case (FDC2x1x_CH1):
 			writeRegister(FDC2x1x_CLOCK_DIVIDERS_CH1,DataW);
 		break;
-		case (2):
+		case (FDC2x1x_CH2):
 			writeRegister(FDC2x1x_CLOCK_DIVIDERS_CH2,DataW);
 		break;
-		case (3):
+		case (FDC2x1x_CH3):
 			writeRegister(FDC2x1x_CLOCK_DIVIDERS_CH3,DataW);
 		break;
 		default:
@@ -180,7 +244,7 @@ void FDC2214::setDividers(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxR
              and adjust the IDRIVE value
 */
 /**************************************************************************/
-void FDC2214::setDriveCurrent(uint8_t channel, uint16_t CHxIDrive)
+void FDC2214::setDriveCurrent(enum Channel channel, uint16_t CHxIDrive)
 {
   uint16_t DataW;
 
@@ -191,16 +255,16 @@ void FDC2214::setDriveCurrent(uint8_t channel, uint16_t CHxIDrive)
 
   switch (channel)
   {
-    case (0):
+    case (FDC2x1x_CH0):
       writeRegister(FDC2x1x_DRIVE_CURRENT_CH0,DataW);
 		break;
-		case (1):
+		case (FDC2x1x_CH1):
 			writeRegister(FDC2x1x_DRIVE_CURRENT_CH1,DataW);
 		break;
-		case (2):
+		case (FDC2x1x_CH2):
 			writeRegister(FDC2x1x_DRIVE_CURRENT_CH2,DataW);
 		break;
-		case (3):
+		case (FDC2x1x_CH3):
 			writeRegister(FDC2x1x_DRIVE_CURRENT_CH3,DataW);
 		break;
 		default:
@@ -220,7 +284,7 @@ void FDC2214::setDriveCurrent(uint8_t channel, uint16_t CHxIDrive)
               warning is enabled.
 */
 /**************************************************************************/
-void FDC2214::setSettleCount(uint8_t channel, uint16_t CHxSettleCount)
+void FDC2214::setSettleCount(enum Channel channel, uint16_t CHxSettleCount)
 {
   uint16_t DataW;
 
@@ -231,16 +295,16 @@ void FDC2214::setSettleCount(uint8_t channel, uint16_t CHxSettleCount)
 
   switch (channel)
   {
-    case (0):
+    case (FDC2x1x_CH0):
       writeRegister(FDC2x1x_SETTLECOUNT_CH0,DataW);
 		break;
-		case (1):
+		case (FDC2x1x_CH1):
 			writeRegister(FDC2x1x_SETTLECOUNT_CH1,DataW);
 		break;
-		case (2):
+		case (FDC2x1x_CH2):
 			writeRegister(FDC2x1x_SETTLECOUNT_CH2,DataW);
 		break;
-		case (3):
+		case (FDC2x1x_CH3):
 			writeRegister(FDC2x1x_SETTLECOUNT_CH3,DataW);
 		break;
 		default:
@@ -258,7 +322,7 @@ void FDC2214::setSettleCount(uint8_t channel, uint16_t CHxSettleCount)
     @warning  0x0100-0xFFFF: Conversion Time (tC0) = (CH0_RCOUNTˣ16)/fREF0
 */
 /**************************************************************************/
-void FDC2214::setReferenceCount(uint8_t channel, uint16_t CHxRefCount)
+void FDC2214::setReferenceCount(enum Channel channel, uint16_t CHxRefCount)
 {
   uint16_t DataW;
 
@@ -269,16 +333,16 @@ void FDC2214::setReferenceCount(uint8_t channel, uint16_t CHxRefCount)
 
   switch (channel)
   {
-    case (0):
+    case (FDC2x1x_CH0):
       writeRegister(FDC2x1x_RCOUNT_CH0,DataW);
 		break;
-		case (1):
+		case (FDC2x1x_CH1):
 			writeRegister(FDC2x1x_RCOUNT_CH1,DataW);
 		break;
-		case (2):
+		case (FDC2x1x_CH2):
 			writeRegister(FDC2x1x_RCOUNT_CH2,DataW);
 		break;
-		case (3):
+		case (FDC2x1x_CH3):
 			writeRegister(FDC2x1x_RCOUNT_CH3,DataW);
 		break;
 		default:
@@ -294,20 +358,20 @@ void FDC2214::setReferenceCount(uint8_t channel, uint16_t CHxRefCount)
     @param CHxOffset Conversion Offset [fOFFSET_0 = (CH0_OFFSET/216)*fREF0]
 */
 /**************************************************************************/
-void FDC2214::setOffset(uint8_t channel, uint16_t CHxOffset)
+void FDC2214::setOffset(enum Channel channel, uint16_t CHxOffset)
 {
   switch (channel)
   {
-    case (0):
+    case (FDC2x1x_CH0):
       writeRegister(FDC2x1x_OFFSET_CH0,CHxOffset);
 		break;
-		case (1):
+		case (FDC2x1x_CH1):
 			writeRegister(FDC2x1x_OFFSET_CH1,CHxOffset);
 		break;
-		case (2):
+		case (FDC2x1x_CH2):
 			writeRegister(FDC2x1x_OFFSET_CH2,CHxOffset);
 		break;
-		case (3):
+		case (FDC2x1x_CH3):
 			writeRegister(FDC2x1x_OFFSET_CH3,CHxOffset);
 		break;
 		default:
@@ -418,7 +482,148 @@ void FDC2214::setRRSequence(enum AutoscanSequence sequence)
 }
 
 
+/**************************************************************************/
+/*!
+    @brief selects channel for continuous conversation
+    @param channel Channel Selection ( CH0 - CH3 )
+    @warning  Selects channel for continuous conversions when
+              MUX_CONFIG.SEQUENTIAL is 0!
+*/
+/**************************************************************************/
+void FDC2214::setActiveChannel(enum Channel channel)
+{
+  uint16_t DataR = readRegister(FDC2x1x_CONFIG);
+  DataR &= ~(0b11 << 14);
 
+  switch (channel)
+  {
+    case (FDC2x1x_CH0):
+      DataR |= (0b00 << 14);
+      writeRegister(FDC2x1x_CONFIG,DataR);
+		break;
+		case (FDC2x1x_CH1):
+			DataR |= (0b01 << 14);
+      writeRegister(FDC2x1x_CONFIG,DataR);
+		break;
+		case (FDC2x1x_CH2):
+			DataR |= (0b10 << 14);
+      writeRegister(FDC2x1x_CONFIG,DataR);
+		break;
+		case (FDC2x1x_CH3):
+			DataR |= (0b11 << 14);
+      writeRegister(FDC2x1x_CONFIG,DataR);
+		break;
+		default:
+    break;
+  }
+}
+
+
+/**************************************************************************/
+/*!
+    @brief Enter or exit low power Sleep Mode.
+    @param en Enable Device or Enter Sleep mode [true/false]
+*/
+/**************************************************************************/
+void FDC2214::activateSensor(bool en)
+{
+  uint16_t DataR = readRegister(FDC2x1x_CONFIG);
+  DataR &= ~(1 << 13);
+
+  if(en)
+  {
+    DataR &= ~(1 << 13);
+  }
+  else
+  {
+    DataR |= (1 << 13);
+  }
+  writeRegister(FDC2x1x_CONFIG,DataR);
+}
+
+
+/**************************************************************************/
+/*!
+    @brief Sensor Activation Mode Selection: Set the mode for sensor initialization
+    @param en En/Disable Full Current Activation [true/false]
+    @warning b0: Full Current Activation Mode – the FDC will drive maximum
+              sensor current for a shorter sensor activation time.
+    @warning b1: Low Power Activation Mode – the FDC uses the value
+              programmed in DRIVE_CURRENT_CHx during sensor
+              activation to minimize power consumption.
+*/
+/**************************************************************************/
+void FDC2214::enableFullCurrentActivationMode(bool en)
+{
+  uint16_t DataR = readRegister(FDC2x1x_CONFIG);
+  DataR &= ~(1 << 11);
+
+  if(en)
+  {
+    DataR &= ~(1 << 11);
+  }
+  else
+  {
+    DataR |= (1 << 11);
+  }
+  writeRegister(FDC2x1x_CONFIG,DataR);
+}
+
+
+/**************************************************************************/
+/*!
+    @brief Select Reference Frequency Source
+    @param oscillator select INT or EXT Oscillator as reference
+    @warning b0: Use Internal oscillator as reference frequency
+    @warning b1: Reference frequency is provided from CLKIN pin.
+*/
+/**************************************************************************/
+void FDC2214::selectOscillator(enum Oscillator oscillator)
+{
+  uint16_t DataR = readRegister(FDC2x1x_CONFIG);
+  DataR &= ~(1 << 9);
+
+  switch (oscillator)
+  {
+    case (FDC2x1x_INT_OSC):
+      DataR &= ~(1 << 9);
+      writeRegister(FDC2x1x_CONFIG,DataR);
+		break;
+		case (FDC2x1x_EXT_OSC):
+			DataR |= (1 << 9);
+      writeRegister(FDC2x1x_CONFIG,DataR);
+		break;
+		default:
+    break;
+  }
+}
+
+
+/**************************************************************************/
+/*!
+    @brief Select Reference Frequency Source
+    @param en En/Disable High Current Drive [true/false]
+    @warning b0: The FDC will drive all channels with normal sensor current
+                 (1.5mA max).
+    @warning b1: he FDC will drive channel 0 with current >1.5mA.
+                This mode is not supported if AUTOSCAN_EN = b1 (multichannel mode)
+*/
+/**************************************************************************/
+void FDC2214::enableHighCurrentDrive(bool en)
+{
+  uint16_t DataR = readRegister(FDC2x1x_CONFIG);
+  DataR &= ~(1 << 6);
+
+  if(en)
+  {
+    DataR &= ~(1 << 6);
+  }
+  else
+  {
+    DataR |= (1 << 6);
+  }
+  writeRegister(FDC2x1x_CONFIG,DataR);
+}
 
 
 /**************************************************************************/

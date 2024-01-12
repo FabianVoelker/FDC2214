@@ -45,6 +45,14 @@
 #define FDC2x1x_RESET_DEVICE                0x1C    //< FDC2x1x-Register Reset Device
 
 
+enum Channel
+{
+    FDC2x1x_CH0,
+    FDC2x1x_CH1,
+    FDC2x1x_CH2,
+    FDC2x1x_CH3,
+};
+
 enum IntteruptFunctions 
 {
     FDC2x1x_INTB_OFF,
@@ -65,6 +73,12 @@ enum AutoscanSequence
     FDC2x1x_SEQ_CH0_CH1,
     FDC2x1x_SEQ_CH0_CH1_CH2,
     FDC2x1x_SEQ_CH0_CH1_CH2_CH3,
+};
+
+enum Oscillator
+{
+    FDC2x1x_INT_OSC,
+    FDC2x1x_EXT_OSC,
 };
 
 
@@ -114,8 +128,8 @@ class FDC2214
 
 public:
 
-    FDC2214();
-    bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0, TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD);
+    FDC2214(TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD);
+    bool begin(uint8_t i2caddr = FDC2x1x_ADDRESS_0);
     bool isConnected(void);
 
     uint16_t getManufacturerID(void);
@@ -123,22 +137,28 @@ public:
 
     uint16_t getStatus(void);
 
-    void configureChannel(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider);
 
-    void setDividers(uint8_t channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider);
-    void setDriveCurrent(uint8_t channel, uint16_t CHxIDrive);
-    void setSettleCount(uint8_t channel, uint16_t CHxSettleCount);
-    void setReferenceCount(uint8_t channel, uint16_t CHxRefCount);
-    void setOffset(uint8_t channel, uint16_t CHxOffset);
+
+    uint32_t getReading(enum Channel channel);
+
+
+
+    void configureSingleShotChannel(enum Channel channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider);
+
+    void setDividers(enum Channel channel, uint16_t sensorFreqSel, uint16_t CHxRefDivider);
+    void setDriveCurrent(enum Channel channel, uint16_t CHxIDrive);
+    void setSettleCount(enum Channel channel, uint16_t CHxSettleCount);
+    void setReferenceCount(enum Channel channel, uint16_t CHxRefCount);
+    void setOffset(enum Channel channel, uint16_t CHxOffset);
 
     void setDeglitchFilter(enum DeglitchFilter filter);
     void enableAutoScan(bool en);
     void setRRSequence(enum AutoscanSequence sequence);
 
-    void setActiveChannel(uint8_t channel);
+    void setActiveChannel(enum Channel channel);
     void activateSensor(bool en);
     void enableFullCurrentActivationMode(bool en);
-    void selectOscillator(bool oscillator);
+    void selectOscillator(enum Oscillator oscillator);
     void enableHighCurrentDrive(bool en);
 
     void enableWDError(bool en);
@@ -149,7 +169,7 @@ public:
     
 
 
-    uint32_t getReading(uint8_t channel);
+    
 
 private:
     TwoWire *_i2cPort;  
