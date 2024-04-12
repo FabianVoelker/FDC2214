@@ -238,7 +238,7 @@ void FDC2214::setDividers(enum Channel channel, uint16_t sensorFreqSel, uint16_t
 /*!
     @brief Sets the Drive Current for specific Channel
     @param channel Channel Selection ( CH0 - CH3 )
-    @param CHxIDrive sets Drive Current for Sensor [00000 = 16uA, 11111 = 1.5mA]
+    @param CHxIDrive sets Drive Current for Sensor [0x0000 = 16uA, 0xF800 = 1.5mA]
     @warning oscillation amplitude must between 1.2V and 1.8V!
              Measure the oscillation amplitude on an oscilloscope 
              and adjust the IDRIVE value
@@ -246,12 +246,7 @@ void FDC2214::setDividers(enum Channel channel, uint16_t sensorFreqSel, uint16_t
 /**************************************************************************/
 void FDC2214::setDriveCurrent(enum Channel channel, uint16_t CHxIDrive)
 {
-  uint16_t DataW;
-
-  if(CHxIDrive<32)
-  {
-    DataW |= (CHxIDrive << 11);
-  }
+  uint16_t DataW = CHxIDrive;
 
   switch (channel)
   {
